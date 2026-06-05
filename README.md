@@ -1,4 +1,3 @@
-```markdown
 # MLOps Capstone Project
 
 An end-to-end MLOps pipeline covering data ingestion, model training, experiment tracking, containerization, CI/CD, Kubernetes deployment on AWS EKS, and monitoring with Prometheus and Grafana.
@@ -8,7 +7,7 @@ An end-to-end MLOps pipeline covering data ingestion, model training, experiment
 ## Architecture Overview
 
 
-```
+
 
 Data Pipeline (DVC)
 ↓
