@@ -65,7 +65,6 @@ def normalize_text(text):
     text = removing_punctuations(text)
     text = removing_urls(text)
     text = lemmatization(text)
-
     return text
 
 # Below code block is for local use
@@ -76,7 +75,6 @@ def normalize_text(text):
 
 # Below code block is for production use
 # -------------------------------------------------------------------------------------
-# Set up DagsHub credentials for MLflow tracking
 dagshub_token = os.getenv("CAPSTONE_TEST")
 if not dagshub_token:
     raise EnvironmentError("CAPSTONE_TEST environment variable is not set")
@@ -84,10 +82,11 @@ if not dagshub_token:
 os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
 os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
 
-dagshub_url = "https://dagshub.com/SANJAY-SRINIVAS226/Capstone-project.mlflow"
+dagshub_url = "https://dagshub.com"
 repo_owner = "SANJAY-SRINIVAS226"
 repo_name = "Capstone-project"
-# Set up MLflow tracking URI
+
+# Set up MLflow tracking URI (fixed - was duplicating the path before)
 mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
 # -------------------------------------------------------------------------------------
 
@@ -95,12 +94,10 @@ mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
 # Initialize Flask app
 app = Flask(__name__, template_folder='templates')
 
-# from prometheus_client import CollectorRegistry
-
 # Create a custom registry
 registry = CollectorRegistry()
 
-# Define your custom metrics using this registry
+# Define custom metrics
 REQUEST_COUNT = Counter(
     "app_request_count", "Total number of requests to the app", ["method", "endpoint"], registry=registry
 )
@@ -114,12 +111,16 @@ PREDICTION_COUNT = Counter(
 # ------------------------------------------------------------------------------------------
 # Model and vectorizer setup
 model_name = "my_model"
+
 def get_latest_model_version(model_name):
     client = mlflow.MlflowClient()
-    latest_version = client.get_latest_versions(model_name, stages=["Staging"])
-    if not latest_version:
-        latest_version = client.get_latest_versions(model_name, stages=["None"])
-    return latest_version[0].version if latest_version else None
+    # Get all versions of the model (replaces deprecated get_latest_versions with stages)
+    all_versions = client.search_model_versions(f"name='{model_name}'")
+    if not all_versions:
+        raise ValueError(f"No versions found for model '{model_name}'")
+    # Return the latest version by version number
+    latest = max(all_versions, key=lambda v: int(v.version))
+    return latest.version
 
 model_version = get_latest_model_version(model_name)
 model_uri = f'models:/{model_name}/{model_version}'
@@ -163,5 +164,5 @@ def metrics():
     return generate_latest(registry), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
 if __name__ == "__main__":
-     app.run(debug=True) # for local use
-    #app.run(debug=True, host="0.0.0.0", port=5000)  # Accessible from outside Docker
+    app.run(debug=True)  # for local use
+    # app.run(debug=True, host="0.0.0.0", port=5000)  # Accessible from outside Docker
